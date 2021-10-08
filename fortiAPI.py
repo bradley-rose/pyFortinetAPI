@@ -609,3 +609,52 @@ class FortiGate:
             return request.json()
         else:
             return request.status_code
+    
+    def get_ipsec_vpn_status(self):
+        results = []
+        api_url = self.urlbase
+        phase1 = self.get(api_url + "api/v2/cmdb/vpn.ipsec/phase1-interface")
+        phase2 = self.get(api_url + "api/v2/cmdb/vpn.ipsec/phase2-interface")
+        if not phase1:
+            logging.error('No IPsec VPN configured on this device.')
+            return "No IPsec VPN configured."
+        results.append(phase1[0])
+        results.append(phase2[0])
+        return results
+
+    def create_ipsec_vpn(self, vpnName, data):
+        phase1_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase1-interface"
+        phase2_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase2-interface"
+        # Check whether target object already exists
+        if self.does_exist(phase1_url + "/" + vpnName):
+            logging.error('LDAP User/Group "{vpn_Name}" already exists.'.format(
+                vpn_Name=vpnName))
+            return 424
+        results = []
+        results.append(self.post(phase1_url, data[0]))
+        results.append(self.post(phase2_url, data[1]))
+        return results
+
+    def get_ldap(self):
+        api_url = self.urlbase + "api/v2/cmdb/user/ldap"
+        results = self.get(api_url)
+        if not results:
+            logging.error('No LDAP configured on this device.')
+            return "No LDAP Configured"
+        results = self.get(api_url)
+        return results[0]
+
+    def create_LDAP(self, ldapName, data):
+        """
+        Create LDAP authentication group. 
+        From your main program, call it with:
+        object.create_LDAP("LDAP_Name",{"key":"value","key","value",...}
+        """
+        api_url = self.urlbase + "api/v2/cmdb/user/ldap/"
+        # Check whether target object already exists
+        if self.does_exist(api_url + ldapName):
+            logging.error('LDAP User/Group "{ldap_Name}" already exists.'.format(
+                ldap_Name=ldapName))
+            return 424
+        result = self.post(api_url, data)
+        return result
