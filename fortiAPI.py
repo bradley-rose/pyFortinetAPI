@@ -578,7 +578,7 @@ class FortiGate:
         result = self.put(api_url, data)
         return result
 
-    def get_interfaces(self, specific=False, filters=False, interfaceNames = []):
+    def get_interfaces(self, specific=False, filters=False):
         """
         Get just the names of the interfaces output into a list, and nothing more.
         """
@@ -588,9 +588,7 @@ class FortiGate:
         elif filters:
             api_url += "?filter=" + filters
         results = self.get(api_url)
-        for interface in results:
-            interfaceNames.append(interface["name"])
-        return interfaceNames
+        return results
 
     def get_interface(self, interfaceName):
         api_url = self.urlbase + "api/v2/cmdb/system/interface/" + interfaceName
@@ -600,3 +598,14 @@ class FortiGate:
             return 404
         results = self.get(api_url)
         return results[0]
+
+    def get_system_status(self):
+        api_url = self.urlbase + "api/v2/cmdb/system/status"
+        session = self.login()
+        request = session.get(api_url, verify=False, timeout=self.timeout, params='vdom='+self.vdom)
+        self.logout(session)
+
+        if request.status_code == 200:
+            return request.json()
+        else:
+            return request.status_code
