@@ -577,6 +577,16 @@ class FortiGate:
             return 404
         result = self.put(api_url, data)
         return result
+    
+    def create_interface(self, interfaceName, data):
+        api_url = self.urlbase + "api/v2/cmdb/system/interface/" + str(interfaceName)
+        # Check whether target object already exists
+        if self.does_exist(api_url):
+            logging.error('Requested interface "{interface_Name}" already exists.'.format(
+                    interface_Name=interfaceName))
+            return 424
+        result = self.post(api_url, data)
+        return result
 
     def get_interfaces(self, specific=False, filters=False):
         """
@@ -620,7 +630,7 @@ class FortiGate:
             return "No IPsec VPN configured."
         results.append(phase1[0])
         results.append(phase2[0])
-        return results
+        return results[0]
 
     def create_ipsec_vpn(self, vpnName, data):
         phase1_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase1-interface"
@@ -658,3 +668,47 @@ class FortiGate:
             return 424
         result = self.post(api_url, data)
         return result
+
+    def create_API_Group(self, data):
+        api_url = self.urlbase + "api/v2/cmdb/system/accprofile"
+        if self.does_exist(api_url + "API_Admins"):
+            return "API_Admins group already exists."
+        result = self.post(api_url, data)
+        return result
+
+    def update_global_settings(self, data):
+        api_url = self.urlbase + "api/v2/cmdb/system/global"
+        result = self.put(api_url, data)
+        return result
+
+    def get_global_settings(self):
+        api_url = self.urlbase + "api/v2/cmdb/system/global"
+        return self.get(api_url)
+
+    def update_global_autoinstall(self, data):
+        api_url = self.urlbase + "api/v2/cmdb/system/auto-install"
+        result = self.put(api_url, data)
+        return result
+
+    def get_global_autoinstall(self):
+        api_url = self.urlbase + "api/v2/cmdb/system/auto-install"
+        return self.get(api_url)
+
+    def create_switch_interface(self, interfaceName, data):
+        api_url = self.urlbase + "api/v2/cmdb/system/switch-interface/" + str(interfaceName)
+        # Check whether target object already exists
+        if self.does_exist(api_url):
+            logging.error('Requested interface "{interface_Name}" already exists.'.format(
+                    interface_Name=interfaceName))
+            return 424
+        result = self.post(api_url, data)
+        return result
+
+    def get_switch_interface(self, interfaceName):
+        api_url = self.urlbase + "api/v2/cmdb/system/switch-interface/" + str(interfaceName)
+        if not self.does_exist(api_url):
+            logging.error('Requested switch interface "{interface_Name}" does not exist.'.format(
+                interface_Name=interfaceName))
+            return 404
+        results = self.get(api_url)
+        return results
