@@ -13,7 +13,19 @@ def main():
     
     # Static entries for devices.
     devices = {}
-    devices["physicalDevice"] = ["192.168.0.1","443","admin","admin"]
+
+    hostname = "BradleyHomeGateway"
+    ipAddr = "10.69.10.254"
+    port = "443"
+    username = "Bradley Rose"
+    password = "J7*bL2f!Om2mlN3F$gJY"
+
+    devices[hostname] = [
+        ipAddr, 
+        port, 
+        username,
+        password
+    ]
     #devices[""] = ["ipAddress","port","username","password"]   
     # Call the "login" class from "login.py", and return active API sessions.
     sessions = login(devices)
@@ -55,13 +67,14 @@ def main():
             'gui-firmware-upgrade-warning':'disable',
             'gui-display-hostname':'enable',
             'gui-ipv6':'disable',
+            'admin-telnet-port':'23',
             'gui-wireless-opensecurity':'disable',
             'language':'english',
             'lldp-reception':'disable',
             'lldp-transmission':'disable',
             'login-timestamp':'enable'
         }
-        result = device.update_global(repr(payload))
+        result = device.update_global_settings(repr(payload))
         print(result)
 
         # Disable firmware & configuration auto-install
@@ -75,7 +88,7 @@ def main():
         ########################
         # 2. Create interfaces #
         ########################
-
+        """
         payload = {
             'name':'Internal',
             'member':['lan3'],
@@ -83,11 +96,7 @@ def main():
         }
         result = device.create_switch_interface(repr(payload))
         print(result)
-
-        # Create API Admin Group
-        #payload = {'name':'API_Admins','comments':'RestAPI Admin Profile','secfabgrp':'read-write','netgrp':'read-write','vpngrp':'read-write','fwgrp':'read-write','loggrp':'read-write','utmgrp':'read-write','wanoptgrp':'read-write','wifi':'read-write','ftviewgrp':'read-write','authgrp':'read-write','sysgrp':'read-write'}
-        #result = device.create_API_Group(repr(payload))
-        #print(result)
+        """
 
         # Get System Status
         status = device.get_system_status()
@@ -95,16 +104,19 @@ def main():
         print("Build:",status["build"])
         print("Serial #:",status["serial"])
 
-        # Get Interfaces
-        #interfaces = device.get_interfaces()
-        #for interface in interfaces:
-            #print("Interface Name:",interface["name"])
-            #print("Alias:", interface["alias"])
-        #print("------******------")
-        
-        #print(interfaces)
+        result = device.get_ipsec_vpn_status()
+        print(result)
 
-        #print("------******------")
+        # Get Interfaces
+        interfaces = device.get_interfaces()
+        for interface in interfaces:
+            print("Interface Name:",interface["name"])
+            print("Alias:", interface["alias"])
+        print("------******------")
+        
+        print(device.get_interface("lan2"))
+
+        print("------******------")
 
 if __name__ == "__main__":
     main()
