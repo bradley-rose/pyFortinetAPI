@@ -12,7 +12,7 @@ def main():
     """
     
     # Static entries for devices.
-    devices = {}
+    devices = {}ghghgh
 
     hostname = "BradleyHomeGateway"
     ipAddr = "10.69.10.254"
