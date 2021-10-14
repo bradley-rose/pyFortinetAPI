@@ -43,4 +43,12 @@ def main():
         print("Version:",status["version"])
         print("Build:",status["build"])
         print("Serial #:",status["serial"])
+
+        # Disable firmware & configuration auto-install
+        # NOTE: Take notice of the payload being sent in via the "repr" method. This is critical.
+        payload = {
+            'auto_install_config':'disable',
+            'auto_install_image':'disable'
+        }
+        device.update_global_autoinstall(repr(payload))
 ```

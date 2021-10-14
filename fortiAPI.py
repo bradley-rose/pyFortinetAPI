@@ -1,9 +1,3 @@
-#import requests
-#session = requests.session()
-#credentials = {"username":"Fortinet-Local-Admin","secretkey":"mli2WdJPSath0PK2AZ7F"}
-#r = requests.post("https://10.69.10.25:8443/logincheck",data=credentials)
-#print (r.text)
-
 #!/usr/bin/env Python
 __author__ = "James Simpson"
 __copyright__ = "Copyright 2017, James Simpson"
@@ -17,9 +11,8 @@ import logging
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-
 class FortiGate:
-    def __init__(self, ipaddr, username, password, timeout=10, vdom="root", port="443"):
+    def __init__(self, ipaddr,networkAddressCIDR,username,password,region,timeout=10, vdom="root", port="443", role="spoke"):
 
         self.ipaddr = ipaddr
         self.username = username
@@ -28,6 +21,9 @@ class FortiGate:
         self.urlbase = "https://{ipaddr}:{port}/".format(ipaddr=self.ipaddr,port=self.port)
         self.timeout = timeout
         self.vdom = vdom
+        self.role = role
+        self.networkAddress = networkAddressCIDR
+        self.region = region
 
     # Login / Logout Handlers
     def login(self):
@@ -594,20 +590,11 @@ class FortiGate:
         """
         api_url = self.urlbase + "api/v2/cmdb/system/interface"
         if specific:
-            api_url += specific
+            api_url += '/' + specific
         elif filters:
             api_url += "?filter=" + filters
         results = self.get(api_url)
         return results
-
-    def get_interface(self, interfaceName):
-        api_url = self.urlbase + "api/v2/cmdb/system/interface/" + interfaceName
-        if not self.does_exist(api_url):
-            logging.error('Requested interface "{interface_Name}" does not exist.'.format(
-                interface_Name=interfaceName))
-            return 404
-        results = self.get(api_url)
-        return results[0]
 
     def get_system_status(self):
         api_url = self.urlbase + "api/v2/cmdb/system/status"
@@ -695,12 +682,9 @@ class FortiGate:
         return self.get(api_url)
 
     def create_switch_interface(self, interfaceName, data):
-        api_url = self.urlbase + "api/v2/cmdb/system/switch-interface/" + str(interfaceName)
+        api_url = self.urlbase + "api/v2/cmdb/system/switch-interface"
         # Check whether target object already exists
-        if self.does_exist(api_url):
-            logging.error('Requested interface "{interface_Name}" already exists.'.format(
-                    interface_Name=interfaceName))
-            return 424
+
         result = self.post(api_url, data)
         return result
 
@@ -712,3 +696,46 @@ class FortiGate:
             return 404
         results = self.get(api_url)
         return results
+
+    def update_switch_interface(self, interfaceName, data):
+        api_url = self.urlbase + "api/v2/cmdb/system/switch-interface/" + str(interfaceName)
+        if not self.does_exist(api_url):
+            logging.error('Requested switch interface "{interface_Name}" does not exist.'.format(
+                interface_Name=interfaceName))
+            return 404
+        results = self.put(api_url, data)
+        return results
+    
+    def create_dhcp_server(self, data):
+        api_url = self.urlbase + "api/v2/cmdb/system.dhcp/server"
+        results = self.post(api_url, data)
+        return results
+
+    def get_dhcp_server(self, id):
+        api_url = self.urlbase + "api/v2/cmdb/system.dhcp/server/" + str(id)
+        if self.does_exist(api_url):
+            return self.get(api_url)
+        else:
+            return False
+
+    def update_dns_settings(self, data):
+        api_url = self.urlbase + "api/v2/cmdb/system/dns"
+        return self.put(api_url, data)
+
+    def create_LDAP(self, ldapName, data):
+        api_url = self.urlbase + "api/v2/cmdb/user/ldap"
+        if self.does_exist(api_url + '/' + ldapName):
+            return "ldapName already exists."
+        result = self.post(api_url, data)
+
+    def create_VPN_phase1(self,name,data):
+        api_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase1-interface"
+        if self.does_exist(api_url + name):
+            return 424
+        return self.post(api_url, data)
+
+    def create_VPN_phase2(self,name,data):
+        api_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase2-interface"
+        if self.does_exist(api_url + name):
+            return 424
+        return self.post(api_url, data)

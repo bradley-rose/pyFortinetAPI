@@ -4,11 +4,16 @@ class login:
     def login(self, devices):
         sessions = {}
         for name,device in devices.items():
-            ipAddress = device[0]
-            httpsPort = device[1]
-            loginUsername = device[2]
-            loginPassword = device[3]
-            sessions[name] = (fapi.FortiGate(ipaddr=ipAddress,username=loginUsername,password=loginPassword,timeout=10,vdom='root',port=httpsPort))
+            sessions[name] = (fapi.FortiGate(
+                ipaddr=device['ipaddr'],
+                username=device['username'],
+                password=device['password'],
+                port=device['port'],
+                networkAddressCIDR=device['networkAddressCIDR'],
+                role=device['role'],
+                region=device['region']
+                )
+            )
 
         return sessions
 sys.modules[__name__] = login()
