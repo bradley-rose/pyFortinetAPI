@@ -739,3 +739,7 @@ class FortiGate:
         if self.does_exist(api_url + name):
             return 424
         return self.post(api_url, data)
+
+    def create_static_route(self,data):
+        api_url = self.urlbase + "api/v2/cmdb/router/static"
+        return self.post(api_url, data)
