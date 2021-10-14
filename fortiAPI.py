@@ -743,3 +743,11 @@ class FortiGate:
     def create_static_route(self,data):
         api_url = self.urlbase + "api/v2/cmdb/router/static"
         return self.post(api_url, data)
+
+    def create_bgp_route(self, data):
+        api_url = self.urlbase + "api/v2/cmdb/router/bgp"
+        return self.put(api_url, data)
+
+    def get_bgp_route(self):
+        api_url = self.urlbase + "api/v2/cmdb/router/bgp"
+        return self.get(api_url)
