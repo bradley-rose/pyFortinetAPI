@@ -12,7 +12,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class FortiGate:
-    def __init__(self, ipaddr,networkAddressCIDR,username,password,region,timeout=10, vdom="root", port="443", role="spoke"):
+    def __init__(self, ipaddr,networkAddress,username,password,region,connectionType="dhcp",timeout=10,vdom="root",port="443"):
 
         self.ipaddr = ipaddr
         self.username = username
@@ -21,9 +21,9 @@ class FortiGate:
         self.urlbase = "https://{ipaddr}:{port}/".format(ipaddr=self.ipaddr,port=self.port)
         self.timeout = timeout
         self.vdom = vdom
-        self.role = role
-        self.networkAddress = networkAddressCIDR
+        self.networkAddress = networkAddress
         self.region = region
+        self.connectionType = connectionType
 
     # Login / Logout Handlers
     def login(self):
@@ -143,21 +143,6 @@ class FortiGate:
         results = self.get(api_url)
         return results
 
-    def update_firewall_address(self, address, data):
-        """
-        Update firewall address record with provided data
-        :param address: Address record being updated
-        :param data: JSON Data with which to upate the address record
-        :return: HTTP Status Code
-        """
-        api_url = self.urlbase + "api/v2/cmdb/firewall/address/" + requests.utils.quote(address, safe='')
-        # Check whether target object exists
-        if not self.does_exist(api_url):
-            logging.error('Requested address "{address}" does not exist in Firewall config.'.format(address=address))
-            return 404
-        result = self.put(api_url, data)
-        return result
-
     def create_firewall_address(self, address, data):
         """
         Create firewall address record
@@ -167,10 +152,23 @@ class FortiGate:
         """
         api_url = self.urlbase + "api/v2/cmdb/firewall/address/"
         # Check whether target object already exists
-        if self.does_exist(api_url + address):
-            return 424
-        result = self.post(api_url, data)
-        return result
+        if not self.does_exist(api_url + address):
+            self.post(api_url, repr(data))
+            return '\x1b[1;32;40m' + ("Created firewall address: " + address) + '\x1b[0m'
+               
+        api_url += str(address)
+        same=True
+        diffVar = self.get(api_url)[0]
+
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;32;40m' + ("Updated interface: " + address) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ('No changes to ' + address + ' necessary.') + '\x1b[0m'
+            
 
     def delete_firewall_address(self, address):
         """
@@ -198,22 +196,6 @@ class FortiGate:
         results = self.get(api_url)
         return results
 
-    def update_address_group(self, group_name, data):
-        """
-        Update address group with provided data
-        :param group_name: Address group being updated
-        :param data: JSON Data with which to upate the address group
-        :return: HTTP Status Code
-        """
-        api_url = self.urlbase + "api/v2/cmdb/firewall/addrgrp/" + group_name
-        # Check whether target object already exists
-        if not self.does_exist(api_url):
-            logging.error('Requested address group "{group_name}" does not exist in Firewall config.'.format(
-                group_name=group_name))
-            return 404
-        result = self.put(api_url, data)
-        return result
-
     def create_address_group(self, group_name, data):
         """
         Create address group
@@ -222,10 +204,22 @@ class FortiGate:
         :return: HTTP Status Code.
         """
         api_url = self.urlbase + "api/v2/cmdb/firewall/addrgrp/"
-        if self.does_exist(api_url + group_name):
-            return 424
-        result = self.post(api_url, data)
-        return result
+        if not self.does_exist(api_url + group_name):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created firewall address group: " + group_name) + '\x1b[0m'
+
+        api_url += str(group_name)
+        same=True
+        diffVar = self.get(api_url)[0]
+
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated interface: " + group_name) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ('No changes to ' + group_name + ' necessary.') + '\x1b[0m'
 
     def delete_address_group(self, group_name):
         """
@@ -465,10 +459,23 @@ class FortiGate:
         """
         api_url = self.urlbase + "api/v2/cmdb/firewall/policy/"
         # Check whether object already exists
-        if self.does_exist(api_url + str(policy_id)):
-            return 424
-        result = self.post(api_url, "{{'json': {data}}}".format(data=data))
-        return result
+        if not self.does_exist(api_url + str(policy_id)):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created firewall policy: " + data['name']) + '\x1b[0m'
+
+        api_url += str(policy_id)
+        same=True
+        diffVar = self.get(api_url)[0]
+        
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated firewall policy: " + data['name']) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ('No changes to firewall policy' + data['name'] + ' necessary.') + '\x1b[0m'
+
 
     def delete_firewall_policy(self, policy_id):
         """
@@ -558,31 +565,36 @@ class FortiGate:
         return results
 
     
-    def update_interface(self, interfaceName, data):
+    def create_interface(self, interfaceName, data):
         """
         Update SNMP community with provided data
         :param community_id: ID of community  being updated
         :param data: JSON Data with which to update the community
         :return: HTTP Status Code
         """
-        api_url = self.urlbase + "api/v2/cmdb/system/interface/" + str(interfaceName)
+        api_url = self.urlbase + "api/v2/cmdb/system/interface/"
         # Check whether target object already exists
-        if not self.does_exist(api_url):
-            logging.error('Requested interface "{interface_Name}" does not exist.'.format(
-                interface_Name=interfaceName))
-            return 404
-        result = self.put(api_url, data)
-        return result
-    
-    def create_interface(self, interfaceName, data):
-        api_url = self.urlbase + "api/v2/cmdb/system/interface/" + str(interfaceName)
-        # Check whether target object already exists
-        if self.does_exist(api_url):
-            logging.error('Requested interface "{interface_Name}" already exists.'.format(
-                    interface_Name=interfaceName))
-            return 424
-        result = self.post(api_url, data)
-        return result
+        if not self.does_exist(api_url + str(interfaceName)):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created interface: " + str(interfaceName)) + '\x1b[0m'
+        
+        api_url += str(interfaceName)
+        same=True
+        diffVar = self.get(api_url)[0]
+
+        for key,value in data.items():
+            if key == 'allowaccess':
+                value = " ".join(sorted(data[key].split()))
+                diffVar[key] = " ".join(sorted(diffVar[key].split()))
+            if not value == diffVar[key]:
+                same=False
+        
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated interface: " + str(interfaceName)) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ('No changes to ' + str(interfaceName) + ' necessary.') + '\x1b[0m'
+      
 
     def get_interfaces(self, specific=False, filters=False):
         """
@@ -606,31 +618,6 @@ class FortiGate:
             return request.json()
         else:
             return request.status_code
-    
-    def get_ipsec_vpn_status(self):
-        results = []
-        api_url = self.urlbase
-        phase1 = self.get(api_url + "api/v2/cmdb/vpn.ipsec/phase1-interface")
-        phase2 = self.get(api_url + "api/v2/cmdb/vpn.ipsec/phase2-interface")
-        if not phase1:
-            logging.error('No IPsec VPN configured on this device.')
-            return "No IPsec VPN configured."
-        results.append(phase1[0])
-        results.append(phase2[0])
-        return results[0]
-
-    def create_ipsec_vpn(self, vpnName, data):
-        phase1_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase1-interface"
-        phase2_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase2-interface"
-        # Check whether target object already exists
-        if self.does_exist(phase1_url + "/" + vpnName):
-            logging.error('LDAP User/Group "{vpn_Name}" already exists.'.format(
-                vpn_Name=vpnName))
-            return 424
-        results = []
-        results.append(self.post(phase1_url, data[0]))
-        results.append(self.post(phase2_url, data[1]))
-        return results
 
     def get_ldap(self):
         api_url = self.urlbase + "api/v2/cmdb/user/ldap"
@@ -641,32 +628,18 @@ class FortiGate:
         results = self.get(api_url)
         return results[0]
 
-    def create_LDAP(self, ldapName, data):
-        """
-        Create LDAP authentication group. 
-        From your main program, call it with:
-        object.create_LDAP("LDAP_Name",{"key":"value","key","value",...}
-        """
-        api_url = self.urlbase + "api/v2/cmdb/user/ldap/"
-        # Check whether target object already exists
-        if self.does_exist(api_url + ldapName):
-            logging.error('LDAP User/Group "{ldap_Name}" already exists.'.format(
-                ldap_Name=ldapName))
-            return 424
-        result = self.post(api_url, data)
-        return result
-
-    def create_API_Group(self, data):
-        api_url = self.urlbase + "api/v2/cmdb/system/accprofile"
-        if self.does_exist(api_url + "API_Admins"):
-            return "API_Admins group already exists."
-        result = self.post(api_url, data)
-        return result
-
     def update_global_settings(self, data):
         api_url = self.urlbase + "api/v2/cmdb/system/global"
-        result = self.put(api_url, data)
-        return result
+        same=True
+        diffVar = self.get(api_url)
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated global settings.") + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ('No changes to global settings necessary.') + '\x1b[0m'
 
     def get_global_settings(self):
         api_url = self.urlbase + "api/v2/cmdb/system/global"
@@ -674,19 +647,22 @@ class FortiGate:
 
     def update_global_autoinstall(self, data):
         api_url = self.urlbase + "api/v2/cmdb/system/auto-install"
-        result = self.put(api_url, data)
-        return result
+        same=True
+        diffVar = self.get(api_url)
 
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated auto-installation settings.") + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ('No changes to autoinstall settings necessary.') + '\x1b[0m'
+
+            
     def get_global_autoinstall(self):
         api_url = self.urlbase + "api/v2/cmdb/system/auto-install"
         return self.get(api_url)
-
-    def create_switch_interface(self, interfaceName, data):
-        api_url = self.urlbase + "api/v2/cmdb/system/switch-interface"
-        # Check whether target object already exists
-
-        result = self.post(api_url, data)
-        return result
 
     def get_switch_interface(self, interfaceName):
         api_url = self.urlbase + "api/v2/cmdb/system/switch-interface/" + str(interfaceName)
@@ -707,9 +683,22 @@ class FortiGate:
         return results
     
     def create_dhcp_server(self, data):
-        api_url = self.urlbase + "api/v2/cmdb/system.dhcp/server"
-        results = self.post(api_url, data)
-        return results
+        api_url = self.urlbase + "api/v2/cmdb/system.dhcp/server/"
+        if not self.does_exist(api_url + str(data['id'])):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created DHCP server for: " + data['interface']) + '\x1b[0m'
+
+        api_url += str(data['id'])
+        same=True
+        diffVar = self.get(api_url)[0]
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated: " + str(data['interface']) + " DHCP settings.") + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to " + str(data['interface']) + " DHCP settings necessary.") + '\x1b[0m'
 
     def get_dhcp_server(self, id):
         api_url = self.urlbase + "api/v2/cmdb/system.dhcp/server/" + str(id)
@@ -720,34 +709,188 @@ class FortiGate:
 
     def update_dns_settings(self, data):
         api_url = self.urlbase + "api/v2/cmdb/system/dns"
-        return self.put(api_url, data)
+        same=True
+        diffVar = self.get(api_url)
+
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated system DNS settings.") + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to DNS settings necessary.") + '\x1b[0m'
+
 
     def create_LDAP(self, ldapName, data):
-        api_url = self.urlbase + "api/v2/cmdb/user/ldap"
-        if self.does_exist(api_url + '/' + ldapName):
-            return "ldapName already exists."
-        result = self.post(api_url, data)
+        api_url = self.urlbase + "api/v2/cmdb/user/ldap/"
+        if not self.does_exist(api_url + ldapName):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created LDAP configuration: " + ldapName) + '\x1b[0m'
+
+        api_url += ldapName
+        same=True
+        diffVar = self.get(api_url)[0]
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                if key == 'password':
+                    continue
+                else:
+                    same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated LDAP configuration: " + ldapName) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to LDAP configuration " + ldapName + " necessary.") + '\x1b[0m'
 
     def create_VPN_phase1(self,name,data):
-        api_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase1-interface"
-        if self.does_exist(api_url + name):
-            return 424
-        return self.post(api_url, data)
+        api_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase1-interface/"
+        if not self.does_exist(api_url + name):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created VPN Phase I: " + name) + '\x1b[0m'
+
+        api_url += name
+        same=True
+        diffVar = self.get(api_url)[0]
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                if key == 'psksecret' or 'signature-hash-alg':
+                    continue
+                else:
+                    same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated VPN Phase I configuration: " + name) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to VPN Phase I configuration " + name + " necessary.") + '\x1b[0m'
+
 
     def create_VPN_phase2(self,name,data):
-        api_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase2-interface"
-        if self.does_exist(api_url + name):
-            return 424
-        return self.post(api_url, data)
+        api_url = self.urlbase + "api/v2/cmdb/vpn.ipsec/phase2-interface/"
+        if not self.does_exist(api_url + name):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created VPN Phase II: " + name) + '\x1b[0m'
+
+        api_url += name
+        same=True
+        diffVar = self.get(api_url)[0]
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated VPN Phase II configuration: " + name) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to VPN Phase II configuration " + name + " necessary.") + '\x1b[0m'
 
     def create_static_route(self,data):
-        api_url = self.urlbase + "api/v2/cmdb/router/static"
-        return self.post(api_url, data)
+        api_url = self.urlbase + "api/v2/cmdb/router/static/"
+        if not self.does_exist(api_url + str(data['seq-num'])):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created static route: " + data['comment']) + '\x1b[0m'
+
+        api_url += str(data['seq-num'])
+        same=True
+        diffVar = self.get(api_url)[0]
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated static route: " + data['comment']) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to static route (" + data['comment'] + ") necessary.") + '\x1b[0m'
 
     def create_bgp_route(self, data):
         api_url = self.urlbase + "api/v2/cmdb/router/bgp"
-        return self.put(api_url, data)
+        self.put(api_url, repr(data))
+        return '\x1b[1;33;40m' + ("Set BGP configuration.") + '\x1b[0m'
 
     def get_bgp_route(self):
         api_url = self.urlbase + "api/v2/cmdb/router/bgp"
         return self.get(api_url)
+
+    def get_antivirus_profile(self, name):
+        api_url = self.urlbase + "api/v2/cmdb/antivirus/profile/" + name
+        return self.get(api_url)
+
+    def create_antivirus_profile(self, name, data):
+        api_url = self.urlbase + "api/v2/cmdb/antivirus/profile/"
+
+        if not self.does_exist(api_url + name):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created antivirus profile: " + name) + '\x1b[0m'
+
+        api_url += name
+        same=True
+        diffVar = self.get(api_url)[0]
+
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated antivirus profile route: " + name) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to " + name + "antivirus profile necessary.") + '\x1b[0m'
+
+    def create_user_group(self,data):
+        api_url = self.urlbase + "api/v2/cmdb/user/group/"
+
+        if not self.does_exist(api_url + data['name']):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created user group: " + data['name']) + '\x1b[0m'
+
+        api_url += data['name']
+        same=True
+        diffVar = self.get(api_url)[0]
+        diffVar['match'] = diffVar['match'].sort()
+        data['match'] = data['match'].sort()
+
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated user group: " + data['name']) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to " + data['name'] + " user group necessary.") + '\x1b[0m'
+
+    def create_admin(self,data):
+        api_url = self.urlbase + "api/v2/cmdb/system/admin/"
+
+        if not self.does_exist(api_url + data['name']):
+            self.post(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Created administrator: " + data['name']) + '\x1b[0m'
+
+        api_url += data['name']
+        same=True
+        diffVar = self.get(api_url)[0]
+
+        for key,value in data.items():
+            if not value == diffVar[key]:
+                if key == 'password':
+                    continue
+                else:
+                    same=False
+        if not (same):
+            self.put(api_url, repr(data))
+            return '\x1b[1;33;40m' + ("Updated administrator: " + data['name']) + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("No changes to " + data['name'] + " administrator.") + '\x1b[0m'
+
+    def delete_admin(self, name):
+        api_url = self.urlbase + "api/v2/cmdb/system/admin/" + name
+        if self.does_exist(api_url):
+            self.delete(api_url)
+            return '\x1b[1;33;40m' + ("Administrator ",name,"has been deleted.") + '\x1b[0m'
+        else:
+            return '\x1b[1;32;40m' + ("Administrator does not exist.") + '\x1b[0m'
+
+    def install_ca_certificate(self, data):
+        api_url = self.urlbase + "api/v2/cmdb/certificate/ca/"
+        if not self.does_exist(api_url + 'CA_Cert_1'):
+            return self.post(api_url, repr(data))
+            #return '\x1b[1;33;40m' + ("Installed CA Certificate: " + data['name']) + '\x1b[0m'
+        
+        return '\x1b[1;32;40m' + ("No changes made to existing certificate.") + '\x1b[0m'
