@@ -1,0 +1,16 @@
+meta {
+  name: Create Local Certificate
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/cmdb/vpn.certificate/local
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+  }
+}

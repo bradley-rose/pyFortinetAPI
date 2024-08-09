@@ -1,0 +1,15 @@
+meta {
+  name: Logout
+  type: http
+  seq: 3
+}
+
+delete {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/authentication
+  body: json
+  auth: none
+}
+
+script:post-response {
+  bru.setEnvVar("token","");
+}

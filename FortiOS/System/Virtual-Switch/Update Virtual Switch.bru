@@ -1,0 +1,11 @@
+meta {
+  name: Update Virtual Switch
+  type: http
+  seq: 1
+}
+
+put {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/cmdb/system/virtual-switch/lan
+  body: json
+  auth: none
+}

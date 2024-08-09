@@ -1,0 +1,11 @@
+meta {
+  name: Update Phase 1 Interface
+  type: http
+  seq: 1
+}
+
+put {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/cmdb/vpn.ipsec/phase1-interface/to_east
+  body: json
+  auth: none
+}

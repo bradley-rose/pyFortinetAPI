@@ -1,0 +1,24 @@
+meta {
+  name: First Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/authentication
+  body: json
+  auth: none
+}
+
+headers {
+  X-CSRFTOKEN: 
+}
+
+body:json {
+  {
+    "username":"{{username}}",
+    "secretkey":"",
+    "new_password1":"{{password}}",
+    "new_password2": "{{password}}"
+  }
+}

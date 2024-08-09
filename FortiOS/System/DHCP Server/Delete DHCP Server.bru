@@ -1,0 +1,11 @@
+meta {
+  name: Delete DHCP Server
+  type: http
+  seq: 1
+}
+
+delete {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/cmdb/system.dhcp/server/2
+  body: none
+  auth: none
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/authentication
+  body: json
+  auth: none
+}
+
+headers {
+  X-CSRFTOKEN: 
+}
+
+body:json {
+  {
+    "username":"{{username}}",
+    "secretkey":"{{password}}"
+  }
+  
+}
+
+script:post-response {
+  let cookies = res.getHeader('set-cookie');
+  const cookieArray = cookies.toString().split(";");
+  cookieArray.forEach(cookie => {
+  		if (cookie.includes("ccsrf")) {
+          bru.setEnvVar("token",cookie.split('"')[1]);
+      }
+  });
+}

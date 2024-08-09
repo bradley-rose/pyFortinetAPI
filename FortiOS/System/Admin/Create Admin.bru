@@ -1,0 +1,19 @@
+meta {
+  name: Create Admin
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://{{FortiGate_IP}}:{{FortiGate_Port}}/api/v2/cmdb/system/admin
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name":"{{username}}",
+    "password":"{{password}}",
+    "accprofile":"super_admin"
+  }
+}
